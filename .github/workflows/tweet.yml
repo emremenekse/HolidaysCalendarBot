@@ -18,8 +18,8 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Tweepy yükle
-        run: pip install tweepy
+      - name: Paketleri kur
+        run: pip install requests requests-oauthlib
 
       - name: Tatilleri tweetle
         run: python tweet.py

@@ -1,31 +1,31 @@
-import json
 import os
+import json
+import requests
+from requests_oauthlib import OAuth1
 from datetime import datetime
-import tweepy
 
-# Twitter kimlik doğrulama
-auth = tweepy.OAuth1UserHandler(
+# Twitter OAuth 1.0 kimlik doğrulama
+auth = OAuth1(
     os.getenv("TWITTER_API_KEY"),
     os.getenv("TWITTER_API_SECRET"),
     os.getenv("TWITTER_ACCESS_TOKEN"),
-    os.getenv("TWITTER_ACCESS_TOKEN_SECRET"),
+    os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 )
-api = tweepy.API(auth)
 
 # Tarih
 today = datetime.today().strftime('%Y-%m-%d')
 
-# Tatil ve ülke verilerini yükle
-with open('holiday.json', 'r', encoding='utf-8-sig') as f:
+# JSON dosyaları
+with open("holiday.json", encoding="utf-8-sig") as f:
     holidays = json.load(f)
 
-with open('countries.json', 'r', encoding='utf-8-sig') as f:
+with open("countries.json", encoding="utf-8-sig") as f:
     country_list = json.load(f)
 
-# CountryCode → CountryName haritası oluştur
+# Ülke kodu -> isim
 country_map = {c["code"].upper(): c["name"] for c in country_list}
 
-# Tatilleri kontrol et
+# Her tatil için ayrı tweet
 for country_code, holiday_list in holidays.items():
     for holiday in holiday_list:
         if holiday["date"].startswith(today):
@@ -33,15 +33,22 @@ for country_code, holiday_list in holidays.items():
             name = holiday["name"]
             url = f"https://holidayscalendar.com.tr/"
 
-            tweet = (
+            tweet_text = (
                 f"📅 {today} – Public Holiday in {country_name}\n"
                 f"🎉 {name}\n\n"
                 f"Details: {url}\n"
                 f"#Holiday #{country_name.replace(' ', '')} #PublicHoliday"
             )
 
-            try:
-                api.update_status(tweet)
-                print(f"✅ {tweet}")
-            except Exception as e:
-                print(f"❌ Failed for {country_name}: {e}")
+            payload = {"text": tweet_text}
+
+            response = requests.post(
+                "https://api.twitter.com/2/tweets",
+                auth=auth,
+                json=payload
+            )
+
+            if response.status_code == 201:
+                print(f"✅ Tweet sent: {tweet_text}")
+            else:
+                print(f"❌ Failed: {response.status_code} – {response.text}")
